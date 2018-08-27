@@ -22,7 +22,9 @@ PATCH_URI+=" 0003-Remove-reference-to-__CYGWIN32__.patch"
 PKG_NAMES="libjit0 libjit-devel"
 
 libjit0_SUMMARY="${SUMMARY} (runtime)"
-libjit0_CONTENTS=""
+libjit0_CONTENTS="usr/bin/*-0.dll"
 
 libjit_devel_SUMMARY="${SUMMARY} (development)"
-libjit_devel_CONTENTS=""
+libjit_devel_CONTENTS="usr/include usr/lib usr/share"
+
+DIFF_EXCLUDES="*.info *.texi"
