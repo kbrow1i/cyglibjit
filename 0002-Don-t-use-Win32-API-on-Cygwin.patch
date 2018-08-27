@@ -1,0 +1,267 @@
+From 84a5ff13a2c34650f8e7f02fedd33372f2fc2d57 Mon Sep 17 00:00:00 2001
+From: Ken Brown <kbrown@cornell.edu>
+Date: Sat, 25 Aug 2018 13:04:47 -0400
+Subject: [PATCH 2/3] Don't use Win32 API on Cygwin
+
+Cygwin is no longer being used to create a native Windows build.  Use
+the Posix API instead of the Win32 API to build libjit for Cygwin.
+---
+ jit/jit-alloc.c             |  8 ++++----
+ jit/jit-apply.c             |  2 +-
+ jit/jit-config.h            | 10 +++-------
+ jit/jit-elf-read.c          |  2 +-
+ jit/jit-insn.c              |  2 +-
+ jit/jit-interp.c            |  2 +-
+ jit/jit-vmem.c              |  4 ++--
+ jitdynamic/jit-cpp-mangle.c |  6 +++---
+ jitdynamic/jit-dynlib.c     | 27 ++-------------------------
+ tools/gen-apply-helper.h    |  3 +--
+ 10 files changed, 19 insertions(+), 47 deletions(-)
+
+diff --git a/jit/jit-alloc.c b/jit/jit-alloc.c
+index a96620b..087a8be 100644
+--- a/jit/jit-alloc.c
++++ b/jit/jit-alloc.c
+@@ -25,7 +25,7 @@
+ #ifdef HAVE_STDLIB_H
+ 	#include <stdlib.h>
+ #endif
+-#ifndef JIT_WIN32_PLATFORM
++#ifndef JIT_WIN32_NATIVE
+ #ifdef HAVE_SYS_TYPES_H
+ 	#include <sys/types.h>
+ #endif
+@@ -38,7 +38,7 @@
+ #ifdef HAVE_FCNTL_H
+ 	#include <fcntl.h>
+ #endif
+-#else /* JIT_WIN32_PLATFORM */
++#else /* JIT_WIN32_NATIVE */
+ 	#include <windows.h>
+ 	#include <io.h>
+ #endif
+@@ -74,7 +74,7 @@
+ void *
+ _jit_malloc_exec(unsigned int size)
+ {
+-#if defined(JIT_WIN32_PLATFORM)
++#if defined(JIT_WIN32_NATIVE)
+ 	return VirtualAlloc(NULL, size,
+ 			    MEM_COMMIT | MEM_RESERVE,
+ 			    PAGE_EXECUTE_READWRITE);
+@@ -105,7 +105,7 @@ _jit_free_exec(void *ptr, unsigned int size)
+ {
+ 	if(ptr)
+ 	{
+-#if defined(JIT_WIN32_PLATFORM)
++#if defined(JIT_WIN32_NATIVE)
+ 		VirtualFree(ptr, 0, MEM_RELEASE);
+ #elif defined(JIT_USE_MMAP)
+ 		munmap(ptr, size);
+diff --git a/jit/jit-apply.c b/jit/jit-apply.c
+index c1de99d..4e791ae 100644
+--- a/jit/jit-apply.c
++++ b/jit/jit-apply.c
+@@ -29,7 +29,7 @@
+ #if HAVE_ALLOCA_H
+ # include <alloca.h>
+ #endif
+-#ifdef JIT_WIN32_PLATFORM
++#ifdef JIT_WIN32_NATIVE
+ # include <malloc.h>
+ # ifndef alloca
+ #  define alloca	_alloca
+diff --git a/jit/jit-config.h b/jit/jit-config.h
+index ad52a89..b9193f1 100644
+--- a/jit/jit-config.h
++++ b/jit/jit-config.h
+@@ -28,12 +28,8 @@
+ /*
+  * Determine what kind of system we are running on.
+  */
+-#if defined(__CYGWIN__) || defined(__CYGWIN32__)
+-# define JIT_WIN32_CYGWIN	1
+-# define JIT_WIN32_PLATFORM	1
+-#elif defined(_WIN32) || defined(WIN32)
++#if defined(_WIN32) || defined(WIN32)
+ # define JIT_WIN32_NATIVE	1
+-# define JIT_WIN32_PLATFORM	1
+ #elif defined(__APPLE__) && defined(__MACH__)
+ # define JIT_DARWIN_PLATFORM	1
+ #elif defined(__linux__)
+@@ -46,7 +42,7 @@
+ #if defined(HAVE_PTHREAD_H) && defined(HAVE_LIBPTHREAD)
+ # define JIT_THREADS_SUPPORTED	1
+ # define JIT_THREADS_PTHREAD	1
+-#elif defined(JIT_WIN32_PLATFORM)
++#elif defined(JIT_WIN32_NATIVE)
+ # define JIT_THREADS_SUPPORTED	1
+ # define JIT_THREADS_WIN32	1
+ #else
+@@ -56,7 +52,7 @@
+ /*
+  * Determine the type of virtual memory API that we are using.
+  */
+-#if defined(JIT_WIN32_PLATFORM)
++#if defined(JIT_WIN32_NATIVE)
+ # define JIT_VMEM_SUPPORTED	1
+ # define JIT_VMEM_WIN32		1
+ #elif defined(HAVE_SYS_MMAN_H)
+diff --git a/jit/jit-elf-read.c b/jit/jit-elf-read.c
+index bb1d670..50efe59 100644
+--- a/jit/jit-elf-read.c
++++ b/jit/jit-elf-read.c
+@@ -23,7 +23,7 @@
+ #include "jit-internal.h"
+ #include "jit-rules.h"
+ #include "jit-elf-defs.h"
+-#ifdef JIT_WIN32_PLATFORM
++#ifdef JIT_WIN32_NATIVE
+ 	#ifdef HAVE_SYS_TYPES_H
+ 		#include <sys/types.h>
+ 	#endif
+diff --git a/jit/jit-insn.c b/jit/jit-insn.c
+index d45bc5e..b40813f 100644
+--- a/jit/jit-insn.c
++++ b/jit/jit-insn.c
+@@ -29,7 +29,7 @@
+ #if HAVE_ALLOCA_H
+ # include <alloca.h>
+ #endif
+-#ifdef JIT_WIN32_PLATFORM
++#ifdef JIT_WIN32_NATIVE
+ # include <malloc.h>
+ # ifndef alloca
+ #  define alloca _alloca
+diff --git a/jit/jit-interp.c b/jit/jit-interp.c
+index 99904d9..21b428d 100644
+--- a/jit/jit-interp.c
++++ b/jit/jit-interp.c
+@@ -36,7 +36,7 @@ straight vanilla ANSI C.
+ #if HAVE_ALLOCA_H
+ 	#include <alloca.h>
+ #endif
+-#ifdef JIT_WIN32_PLATFORM
++#ifdef JIT_WIN32_NATIVE
+ 	#include <malloc.h>
+ 	#ifndef alloca
+ 		#define	alloca	_alloca
+diff --git a/jit/jit-vmem.c b/jit/jit-vmem.c
+index af49a3c..9148c8c 100644
+--- a/jit/jit-vmem.c
++++ b/jit/jit-vmem.c
+@@ -27,14 +27,14 @@
+ # include <sys/mman.h>
+ #endif
+ 
+-#if !defined(JIT_WIN32_PLATFORM) && defined(HAVE_UNISTD_H)
++#if !defined(JIT_WIN32_NATIVE) && defined(HAVE_UNISTD_H)
+ # include <unistd.h>
+ #endif
+ 
+ /*
+  * Define getpagesize() if not provided
+  */
+-#if !defined(JIT_WIN32_PLATFORM) && !defined(HAVE_GETPAGESIZE)
++#if !defined(JIT_WIN32_NATIVE) && !defined(HAVE_GETPAGESIZE)
+ # if defined(NBPG)
+ #  define getpagesize() (NBPG)
+ # elif defined(PAGE_SIZE)
+diff --git a/jitdynamic/jit-cpp-mangle.c b/jitdynamic/jit-cpp-mangle.c
+index d8745c8..be4c993 100644
+--- a/jitdynamic/jit-cpp-mangle.c
++++ b/jitdynamic/jit-cpp-mangle.c
+@@ -944,7 +944,7 @@ static void mangle_type_gcc3(jit_mangler_t mangler, jit_type_t type)
+ 	}
+ }
+ 
+-#if defined(JIT_WIN32_PLATFORM)
++#if defined(JIT_WIN32_NATIVE)
+ 
+ /*
+  * Forward declaration.
+@@ -1280,13 +1280,13 @@ static void mangle_type_msvc6(jit_mangler_t mangler, jit_type_t type)
+ 	}
+ }
+ 
+-#endif /* JIT_WIN32_PLATFORM */
++#endif /* JIT_WIN32_NATIVE */
+ 
+ /*
+  * Name mangling forms, in the order in which they should be tried.
+  * We try to arrange for the most likely to be tried first.
+  */
+-#if defined(JIT_WIN32_PLATFORM)
++#if defined(JIT_WIN32_NATIVE)
+ 	#define	MANGLING_FORM_MSVC_6		0
+ 	#if defined(__GNUC__) && (__GNUC__ >= 3)
+ 		#define	MANGLING_FORM_GCC_3		1
+diff --git a/jitdynamic/jit-dynlib.c b/jitdynamic/jit-dynlib.c
+index 75cf35f..d5abc09 100644
+--- a/jitdynamic/jit-dynlib.c
++++ b/jitdynamic/jit-dynlib.c
+@@ -24,13 +24,8 @@
+ #include <jit/jit-util.h>
+ #include <stdio.h>
+ #include <config.h>
+-#ifdef JIT_WIN32_PLATFORM
++#ifdef JIT_WIN32_NATIVE
+ 	#include <windows.h>
+-	#ifndef JIT_WIN32_NATIVE
+-		#ifdef HAVE_SYS_CYGWIN_H
+-			#include <sys/cygwin.h>
+-		#endif
+-	#endif
+ #else
+ #ifdef HAVE_DLFCN_H
+ 	#include <dlfcn.h>
+@@ -227,31 +222,13 @@ const char *jit_dynlib_get_suffix(void)
+ 	return "dylib";
+ }
+ 
+-#elif defined(JIT_WIN32_PLATFORM)	/* Native Win32 or Cygwin */
++#elif defined(JIT_WIN32_NATIVE)
+ 
+ jit_dynlib_handle_t jit_dynlib_open(const char *name)
+ {
+ 	void *libHandle;
+ 	char *newName = 0;
+ 
+-#if defined(JIT_WIN32_CYGWIN) && defined(HAVE_SYS_CYGWIN_H) && \
+-    defined(HAVE_CYGWIN_CONV_TO_WIN32_PATH)
+-
+-	/* Use Cygwin to expand the path */
+-	{
+-		char buf[4096];
+-		if(cygwin_conv_to_win32_path(name, buf) == 0)
+-		{
+-			newName = jit_strdup(buf);
+-			if(!newName)
+-			{
+-				return 0;
+-			}
+-		}
+-	}
+-
+-#endif
+-
+ 	/* Attempt to load the library */
+ 	libHandle = (void *)LoadLibrary((newName ? newName : name));
+ 	if(libHandle == 0)
+diff --git a/tools/gen-apply-helper.h b/tools/gen-apply-helper.h
+index 825f359..771af6c 100644
+--- a/tools/gen-apply-helper.h
++++ b/tools/gen-apply-helper.h
+@@ -30,8 +30,7 @@
+ #endif
+ #if defined(__i386) || defined(__i386__) || defined(_M_IX86)
+ # define PLATFORM_IS_X86	1
+-# if defined(__CYGWIN__) || defined(__CYGWIN32__) \
+-  || defined(_WIN32) || defined(WIN32)
++# if defined(_WIN32) || defined(WIN32)
+ #  define PLATFORM_IS_WIN32	1
+ #  include <malloc.h>
+ #  ifndef alloca
+-- 
+2.17.0
+

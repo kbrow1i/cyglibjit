@@ -1,0 +1,28 @@
+NAME="libjit"
+VERSION=0.1.4
+RELEASE=1
+
+HOMEPAGE="https://www.gnu.org/software/libjit/"
+CATEGORY="Libs"
+SUMMARY="Just-In-Time compiler functionality"
+DESCRIPTION="LibJIT is a library that provides generic Just-In-Time compiler
+functionality independent of any particular bytecode, language, or
+runtime.  It started off as a part of the DotGNU project and was used
+as the backend for DotGNU Portable.NET JIT engine.  Since then it has
+been used in a number of other projects not related to DotGNU and
+became a separate project on its own right."
+
+GIT_URI=" https://git.savannah.gnu.org/git/libjit.git"
+inherit git
+
+PATCH_URI="0001-Remove-obsolete-compiler-option-on-Cygwin.patch"
+PATCH_URI+=" 0002-Don-t-use-Win32-API-on-Cygwin.patch"
+PATCH_URI+=" 0003-Remove-reference-to-__CYGWIN32__.patch"
+
+PKG_NAMES="libjit0 libjit-devel"
+
+libjit0_SUMMARY="${SUMMARY} (runtime)"
+libjit0_CONTENTS=""
+
+libjit_devel_SUMMARY="${SUMMARY} (development)"
+libjit_devel_CONTENTS=""

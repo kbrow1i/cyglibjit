@@ -1,0 +1,29 @@
+From f6914e6e0a92dd371bc865c2da2ace1d88ca7fc9 Mon Sep 17 00:00:00 2001
+From: Ken Brown <kbrown@cornell.edu>
+Date: Sat, 25 Aug 2018 13:08:29 -0400
+Subject: [PATCH 3/3] Remove reference to __CYGWIN32__
+
+This is deprecated and unnecessary.  It could only cause confusion,
+since readers of the code might think it's intended to distinguish
+32-bit Cygwin from 64-bit Cygwin.
+---
+ jit/jit-apply-x86.h | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/jit/jit-apply-x86.h b/jit/jit-apply-x86.h
+index 1e3f168..2912e95 100644
+--- a/jit/jit-apply-x86.h
++++ b/jit/jit-apply-x86.h
+@@ -34,8 +34,7 @@
+ 
+ #if defined(__GNUC__)
+ 
+-#if !defined(__CYGWIN__) && !defined(__CYGWIN32__) && \
+-	!defined(_WIN32) && !defined(WIN32)
++#if !defined(__CYGWIN__)  && !defined(_WIN32) && !defined(WIN32)
+ 
+ /* Mac OS X prefixes static symbols with an underscore, and external symbol
+    references are late-bound through a PIC stub by the dynamic linker */
+-- 
+2.17.0
+
